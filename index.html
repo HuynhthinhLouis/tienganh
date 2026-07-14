@@ -149,7 +149,6 @@
         .step-title { font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 20px; }
         .chat-bubble { background: white; border: 2px solid #e5e5e5; border-radius: 16px; padding: 18px; font-size: 16px; line-height: 1.6; margin-bottom: 20px; font-weight: 600; white-space: pre-wrap; }
         .feedback-bubble { background: #d7ffb8; border-color: var(--duo-green); }
-        .word-badge { display: inline-block; padding: 4px 8px; margin: 4px; border-radius: 8px; background: #f0f0f0; }
         
         .duo-input {
             width: 100%; background: white; border: 2px solid #e5e5e5; border-radius: 16px; padding: 15px; font-size: 16px; font-weight: 600; font-family: inherit; box-sizing: border-box; transition: 0.2s; margin-bottom: 20px; resize: vertical;
@@ -272,7 +271,7 @@
             <div id="nghe-loader" class="loader-container"><span class="dots">🦉</span><span class="dots">🦉</span><span class="dots">🦉</span></div>
             <div id="nghe-interactive" class="interactive-zone">
                 <div class="chat-bubble" style="text-align: center; background: #f0f8ff;">
-                    <p style="margin-top:0;">Nhấn nút để nghe đoạn văn 👇</p>
+                    <p style="margin-top:0;">Nhấn nút để nghe đoạn văn (Giọng IOE) 👇</p>
                     <button class="duo-btn purple" style="width: auto; padding: 12px 30px;" onclick="speakDictation()">🔊 Nghe Đoạn Văn</button>
                 </div>
                 <div id="nghe-transcript" style="display: none;"></div>
@@ -303,7 +302,6 @@
                 </div>
 
                 <div id="noi-visual-result" class="chat-bubble" style="display: none; text-align: center; font-size: 20px; line-height: 2;"></div>
-                
                 <p id="noi-spoken-text" style="font-style: italic; color: var(--text-light); text-align: center; display: none;"></p>
                 
                 <button id="btn-submit-noi" class="duo-btn" style="display:none;" onclick="checkAnswer('noi')">✨ Nhận Xét Của AI (+20 XP)</button>
@@ -314,12 +312,11 @@
     </div>
 
     <script>
-        // --- 1. CẤU HÌNH SUPABASE ---
+        // --- CẤU HÌNH CƠ BẢN ---
         const SUPABASE_URL = 'https://kbrvgymswczodmkokpzq.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_uPIAhtyxkEakShUdOd4ONQ_n65x8n6v';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // --- 2. HỆ THỐNG RANK VALORANT ---
         const VALORANT_RANKS = [
             "Sắt 1", "Sắt 2", "Sắt 3", "Đồng 1", "Đồng 2", "Đồng 3",
             "Bạc 1", "Bạc 2", "Bạc 3", "Vàng 1", "Vàng 2", "Vàng 3",
@@ -327,10 +324,10 @@
             "Siêu Việt 1", "Siêu Việt 2", "Siêu Việt 3", "Bất Tử 1", "Bất Tử 2", "Bất Tử 3", "Thách Đấu"
         ];
         const XP_PER_RANK = 100;
-
         let currentUser = null;
         let pendingLoginCode = ""; 
 
+        // --- GIAO DIỆN & TÀI KHOẢN ---
         function calculateRankInfo(totalXp) {
             let rankIndex = Math.floor(totalXp / XP_PER_RANK);
             let currentRankName = rankIndex >= VALORANT_RANKS.length ? "Thách Đấu" : VALORANT_RANKS[rankIndex];
@@ -354,7 +351,7 @@
             document.getElementById('login-loader').style.display = 'block';
 
             try {
-                let { data: users, error } = await supabaseClient.from('players').select('*').eq('login_code', code);
+                let { data: users } = await supabaseClient.from('players').select('*').eq('login_code', code);
                 if (users && users.length > 0) {
                     currentUser = users[0];
                     finishLoginProcess();
@@ -364,38 +361,30 @@
                     document.getElementById('register-screen').classList.add('active');
                 }
             } catch (err) {
-                alert("Lỗi kết nối: " + err.message);
+                alert("Lỗi kết nối.");
                 document.getElementById('btn-login').style.display = 'flex';
-            } finally {
-                document.getElementById('login-loader').style.display = 'none';
-            }
+            } finally { document.getElementById('login-loader').style.display = 'none'; }
         }
 
         async function handleRegister() {
             const name = document.getElementById('register-name-input').value.trim();
-            if(!name) return alert("Vui lòng nhập tên hiển thị của bạn!");
+            if(!name) return alert("Vui lòng nhập tên hiển thị!");
             document.getElementById('btn-register').style.display = 'none';
             document.getElementById('register-loader').style.display = 'block';
 
             try {
-                const { data: newUser, error: insertErr } = await supabaseClient
-                    .from('players').insert([{ login_code: pendingLoginCode, display_name: name, xp: 0 }]).select();
-                if (insertErr) throw insertErr;
+                const { data: newUser } = await supabaseClient.from('players').insert([{ login_code: pendingLoginCode, display_name: name, xp: 0 }]).select();
                 currentUser = newUser[0];
-                
                 finishLoginProcess();
             } catch (err) {
-                alert("Lỗi tạo tài khoản: " + err.message);
+                alert("Lỗi tạo tài khoản.");
                 document.getElementById('btn-register').style.display = 'flex';
-            } finally {
-                document.getElementById('register-loader').style.display = 'none';
-            }
+            } finally { document.getElementById('register-loader').style.display = 'none'; }
         }
 
         function finishLoginProcess() {
             document.getElementById('login-screen').classList.remove('active');
             document.getElementById('register-screen').classList.remove('active');
-            
             document.getElementById('profile-bar').style.display = 'flex';
             document.getElementById('main-tabs').style.display = 'flex';
             updateRankUI();
@@ -409,27 +398,15 @@
             await supabaseClient.from('players').update({ xp: currentUser.xp }).eq('id', currentUser.id);
         }
 
-        // --- 3. CẬP NHẬT LOGIC AI PROMPT ---
+        // --- LOGIC AI ---
         const API_KEY = "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";
         const AI_MODEL = "openrouter/free"; 
         
         const EXERCISES = {
-            'doc': { 
-                gen: "Hãy tạo một đoạn văn tiếng Anh độ dài khoảng 150 từ, chủ đề thú vị phù hợp với học sinh trung học cơ sở (trình độ A2-B1). Ngay bên dưới đoạn văn, tạo 3 câu hỏi đọc hiểu tiếng Anh (bao gồm câu hỏi lấy ý chính và chi tiết). Không dùng tiếng Việt ở bước này.", 
-                eval: "Bài đọc và câu hỏi: {TASK}\n\nBài làm của học sinh: {ANSWER}.\n\nHãy chấm điểm từng câu, nhận xét chi tiết, và sửa lỗi ngữ pháp (nếu có) cho học sinh. Giải thích bằng tiếng Việt." 
-            },
-            'viet': { 
-                gen: "Đưa ra 1 chủ đề (topic) tiếng Anh thú vị cho học sinh cấp 2 trình độ B1 (ví dụ: công nghệ, gia đình, ước mơ) và yêu cầu viết một bài luận ngắn khoảng 150-200 từ. Trình bày đề bài và 3 gạch đầu dòng gợi ý bằng tiếng Anh. Thêm 1 dòng hướng dẫn ngắn bằng tiếng Việt.", 
-                eval: "Đề bài: {TASK}\n\nBài viết của học sinh: {ANSWER}.\n\nHãy chấm điểm bài viết (trên thang 10), nhận xét chi tiết về từ vựng, ngữ pháp, độ mạch lạc. Chỉ ra các câu sai và viết lại cho đúng. Đưa ra 1 đoạn văn mẫu ngắn gọn để tham khảo (bằng tiếng Anh). Trả lời bằng tiếng Việt." 
-            },
-            'nghe': { 
-                gen: "Tạo một bài tập nghe tiếng Anh trình độ A2-B1. BẮT BUỘC trả lời theo đúng định dạng sau, gồm 2 phần cách nhau bằng đúng chuỗi '|||'.\nPhần 1: Một đoạn văn tiếng Anh khoảng 40-60 từ.\n|||\nPhần 2: 3 câu hỏi tiếng Anh về đoạn văn đó.\nTuyệt đối không thêm bất kỳ lời chào nào khác ngoài định dạng trên.", 
-                eval: "Đoạn văn gốc: {TRANSCRIPT}\nCâu hỏi: {QUESTIONS}\n\nHọc sinh trả lời: {ANSWER}.\n\nHãy chấm điểm xem học sinh trả lời đúng mấy câu, chỉ ra lỗi sai và dịch đoạn văn gốc sang tiếng Việt." 
-            },
-            'noi': { 
-                gen: "Tạo 1 câu tiếng Anh có ý nghĩa, độ dài khoảng 10-15 từ, có chứa cấu trúc ngữ pháp học sinh cấp 2 (trình độ A2-B1). Chỉ in ra câu đó, không có ngoặc kép, không có lời chào.", 
-                eval: "Câu gốc: {TASK}\nHọc sinh phát âm máy nhận diện được là: {ANSWER}\n\nHãy đánh giá mức độ chính xác của phát âm, khích lệ và chỉ ra những từ học sinh đọc sai hoặc bỏ sót. Giải thích bằng tiếng Việt." 
-            }
+            'doc': { gen: "Hãy tạo một đoạn văn tiếng Anh độ dài khoảng 150 từ, chủ đề thú vị phù hợp với học sinh trung học cơ sở (A2-B1). Ngay bên dưới đoạn văn, tạo 3 câu hỏi đọc hiểu. Không dùng tiếng Việt ở bước này.", eval: "Bài đọc và câu hỏi: {TASK}\n\nBài làm của học sinh: {ANSWER}.\n\nHãy chấm điểm từng câu, nhận xét chi tiết, và sửa lỗi ngữ pháp. Giải thích bằng tiếng Việt." },
+            'viet': { gen: "Đưa ra 1 chủ đề tiếng Anh thú vị cho học sinh cấp 2 (ví dụ: công nghệ, gia đình) và yêu cầu viết một bài luận ngắn khoảng 150-200 từ. Trình bày đề bài và 3 gạch đầu dòng gợi ý bằng tiếng Anh. Thêm 1 dòng hướng dẫn ngắn bằng tiếng Việt.", eval: "Đề bài: {TASK}\n\nBài viết của học sinh: {ANSWER}.\n\nHãy chấm điểm bài viết (trên thang 10), nhận xét chi tiết. Chỉ ra các câu sai và viết lại cho đúng. Đưa ra 1 đoạn văn mẫu ngắn gọn để tham khảo. Trả lời bằng tiếng Việt." },
+            'nghe': { gen: "Tạo một bài tập nghe tiếng Anh trình độ A2-B1. BẮT BUỘC trả lời theo đúng định dạng sau, gồm 2 phần cách nhau bằng đúng chuỗi '|||'.\nPhần 1: Một đoạn văn tiếng Anh khoảng 40-60 từ.\n|||\nPhần 2: 3 câu hỏi tiếng Anh về đoạn văn đó.\nTuyệt đối không thêm bất kỳ lời chào nào khác ngoài định dạng trên.", eval: "Đoạn văn gốc: {TRANSCRIPT}\nCâu hỏi: {QUESTIONS}\n\nHọc sinh trả lời: {ANSWER}.\n\nHãy chấm điểm xem học sinh trả lời đúng mấy câu, chỉ ra lỗi sai và dịch đoạn văn gốc sang tiếng Việt." },
+            'noi': { gen: "Tạo 1 câu tiếng Anh có ý nghĩa, độ dài khoảng 10-15 từ, có chứa cấu trúc ngữ pháp học sinh cấp 2. Chỉ in ra câu đó, không có ngoặc kép, không có lời chào.", eval: "Câu gốc: {TASK}\nHọc sinh phát âm máy nhận diện được là: {ANSWER}\n\nHãy đánh giá mức độ chính xác của phát âm, khích lệ và chỉ ra những từ học sinh đọc sai hoặc bỏ sót. Giải thích bằng tiếng Việt." }
         };
 
         function switchTab(tabId) {
@@ -440,27 +417,65 @@
             else document.querySelector(`.tab-btn[onclick="switchTab('${tabId}')"]`).classList.add('active');
         }
 
-        // --- 4. HỆ THỐNG AUDIO BẢN VÁ LỖI TỐI ƯU ---
+        // ==========================================
+        // 🌟 HỆ THỐNG AUDIO ĐÁM MÂY (CHUNKING) GIỐNG IOE
+        // Hỗ trợ cực tốt trên điện thoại di động
+        // ==========================================
+        let audioQueue = [];
+        let isPlaying = false;
+
         function playCloudAudio(text) {
             if (!text) return;
             
-            // Hủy các giọng đọc đang phát trước đó
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); 
-                
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US'; // Đọc tiếng Anh giọng chuẩn
-                utterance.rate = 0.9;     // Tốc độ hơi chậm lại để dễ nghe hơn
-                utterance.pitch = 1.0;
-                
-                window.speechSynthesis.speak(utterance);
-            } else {
-                alert("Trình duyệt của bạn không hỗ trợ tính năng đọc văn bản.");
+            // Dừng Audio hiện tại nếu đang phát
+            if(window.currentAudio) {
+                window.currentAudio.pause();
+                window.currentAudio.currentTime = 0;
             }
+            audioQueue = [];
+            isPlaying = false;
+
+            // Thuật toán tách câu: Cắt chuỗi theo các dấu câu (, . ! ?) hoặc xuống dòng
+            // Điều này giúp lách luật độ dài ký tự của Google TTS
+            let sentences = text.match(/[^,.\n!?]+[,.\n!?]+/g);
+            if (!sentences) {
+                sentences = [text]; // Nếu không có dấu câu nào
+            } else if (text.length > sentences.join('').length) {
+                sentences.push(text.substring(sentences.join('').length)); // Thêm phần cuối nếu thiếu
+            }
+
+            // Lọc các chuỗi trống và tạo danh sách URL
+            audioQueue = sentences
+                .map(s => s.trim())
+                .filter(s => s.length > 0)
+                .map(s => `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=${encodeURIComponent(s)}`);
+            
+            playNextInQueue();
+        }
+
+        function playNextInQueue() {
+            if(audioQueue.length === 0) {
+                isPlaying = false;
+                return;
+            }
+            isPlaying = true;
+            let url = audioQueue.shift();
+            window.currentAudio = new Audio(url);
+            
+            // Giảm tốc độ đọc một chút (0.85) để nghe rõ ràng, chuẩn phong cách IOE
+            window.currentAudio.playbackRate = 0.85; 
+            
+            window.currentAudio.onended = playNextInQueue; // Đọc xong câu này tự nhảy sang câu tiếp
+            
+            window.currentAudio.play().catch(err => {
+                console.error("Audio phát thất bại (thường do mạng hoặc chưa tương tác): ", err);
+                playNextInQueue(); // Nếu lỗi câu này, cố phát câu tiếp theo
+            });
         }
 
         function speakDictation() { playCloudAudio(document.getElementById('nghe-transcript').innerText); }
         function speakText(elementId) { playCloudAudio(document.getElementById(elementId).innerText); }
+        // ==========================================
 
         async function callAI(prompt) {
             const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -477,7 +492,6 @@
             document.getElementById(`${type}-start`).style.display = 'none';
             document.getElementById(`${type}-loader`).style.display = 'block';
             document.getElementById(`${type}-feedback`).style.display = 'none';
-            
             if(document.getElementById(`${type}-answer`)) document.getElementById(`${type}-answer`).value = '';
             
             if(type === 'noi') {
@@ -489,7 +503,6 @@
 
             try {
                 const aiResponse = await callAI(EXERCISES[type].gen);
-                
                 if(type === 'nghe') {
                     const parts = aiResponse.split('|||');
                     if(parts.length >= 2) {
@@ -502,7 +515,6 @@
                 } else {
                     document.getElementById(`${type}-question`).innerText = aiResponse;
                 }
-
                 document.getElementById(`${type}-loader`).style.display = 'none';
                 document.getElementById(`${type}-interactive`).style.display = 'block';
             } catch (error) {
@@ -561,7 +573,7 @@
             document.getElementById(`${type}-start`).style.display = 'block';
         }
 
-        // --- 5. LOGIC NHẬN DIỆN GIỌNG NÓI (ĐÃ SỬA LỖI ABORTED) ---
+        // --- NHẬN DIỆN GIỌNG NÓI ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let isRecording = false;
@@ -577,25 +589,17 @@
                 spokenTextResult = event.results[0][0].transcript;
                 processPronunciation();
             };
-
             recognition.onerror = function(event) {
-                // Bỏ qua lỗi aborted và no-speech để không gây phiền phức bằng alert
-                if (event.error === 'aborted' || event.error === 'no-speech') {
-                    console.warn("Micro ngắt tự động hoặc không nghe thấy tiếng:", event.error);
-                } else {
+                if (event.error !== 'aborted' && event.error !== 'no-speech') {
                     console.error("Lỗi Micro: " + event.error);
                 }
                 stopRecordingUI();
             };
-
-            recognition.onend = function() {
-                stopRecordingUI();
-            };
+            recognition.onend = function() { stopRecordingUI(); };
         }
 
         function toggleRecording() {
             if (!recognition) return alert("Trình duyệt không hỗ trợ nhận diện giọng nói (Vui lòng dùng Chrome hoặc Edge).");
-            
             if (isRecording) {
                 recognition.stop();
             } else {
@@ -605,13 +609,10 @@
                     const btn = document.getElementById('btn-record');
                     btn.classList.add('recording-pulse');
                     btn.innerText = "🛑 Đang nghe...";
-                    
                     document.getElementById('noi-visual-result').style.display = 'none';
                     document.getElementById('noi-spoken-text').style.display = 'none';
                     document.getElementById('btn-submit-noi').style.display = 'none';
-                } catch (e) {
-                    console.error("Micro đang bận:", e);
-                }
+                } catch (e) { console.error("Micro đang bận"); }
             }
         }
 
@@ -634,7 +635,6 @@
 
             targetWords.forEach(tWord => {
                 let statusColor = "var(--duo-red)";
-                
                 let exactIndex = cloneSpoken.indexOf(tWord);
                 if (exactIndex !== -1) {
                     statusColor = "var(--duo-green)";
@@ -646,7 +646,6 @@
                         cloneSpoken.splice(partialIndex, 1);
                     }
                 }
-
                 resultHtml += `<span style="color: ${statusColor}; border-bottom: 3px solid ${statusColor}; margin-right: 8px; display: inline-block;">${tWord}</span> `;
             });
 
@@ -660,7 +659,6 @@
 
             document.getElementById('btn-submit-noi').style.display = 'inline-flex';
         }
-
     </script>
 </body>
 </html>
