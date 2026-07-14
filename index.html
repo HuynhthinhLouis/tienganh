@@ -392,13 +392,10 @@
             }
         }
 
-        // ĐÃ SỬA LỖI Ở HÀM NÀY
         function finishLoginProcess() {
-            // Ẩn triệt để form Đăng nhập và Đăng ký
             document.getElementById('login-screen').classList.remove('active');
             document.getElementById('register-screen').classList.remove('active');
             
-            // Hiển thị giao diện chính
             document.getElementById('profile-bar').style.display = 'flex';
             document.getElementById('main-tabs').style.display = 'flex';
             updateRankUI();
@@ -412,7 +409,7 @@
             await supabaseClient.from('players').update({ xp: currentUser.xp }).eq('id', currentUser.id);
         }
 
-        // --- 3. CẬP NHẬT LOGIC AI PROMPT (CẤP 2 Khó hơn) ---
+        // --- 3. CẬP NHẬT LOGIC AI PROMPT ---
         const API_KEY = "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";
         const AI_MODEL = "openrouter/free"; 
         
@@ -443,15 +440,23 @@
             else document.querySelector(`.tab-btn[onclick="switchTab('${tabId}')"]`).classList.add('active');
         }
 
-        // --- 4. HỆ THỐNG AUDIO ---
-        let currentAudio = null;
+        // --- 4. HỆ THỐNG AUDIO BẢN VÁ LỖI TỐI ƯU ---
         function playCloudAudio(text) {
             if (!text) return;
-            if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
-            const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=${encodeURIComponent(text)}`;
-            currentAudio = new Audio(url);
-            currentAudio.playbackRate = 0.9; 
-            currentAudio.play();
+            
+            // Hủy các giọng đọc đang phát trước đó
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); 
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US'; // Đọc tiếng Anh giọng chuẩn
+                utterance.rate = 0.9;     // Tốc độ hơi chậm lại để dễ nghe hơn
+                utterance.pitch = 1.0;
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Trình duyệt của bạn không hỗ trợ tính năng đọc văn bản.");
+            }
         }
 
         function speakDictation() { playCloudAudio(document.getElementById('nghe-transcript').innerText); }
@@ -556,7 +561,7 @@
             document.getElementById(`${type}-start`).style.display = 'block';
         }
 
-        // --- 5. LOGIC NHẬN DIỆN GIỌNG NÓI (ELSA STYLE) ---
+        // --- 5. LOGIC NHẬN DIỆN GIỌNG NÓI (ĐÃ SỬA LỖI ABORTED) ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let isRecording = false;
@@ -574,7 +579,12 @@
             };
 
             recognition.onerror = function(event) {
-                alert("Lỗi Micro: " + event.error);
+                // Bỏ qua lỗi aborted và no-speech để không gây phiền phức bằng alert
+                if (event.error === 'aborted' || event.error === 'no-speech') {
+                    console.warn("Micro ngắt tự động hoặc không nghe thấy tiếng:", event.error);
+                } else {
+                    console.error("Lỗi Micro: " + event.error);
+                }
                 stopRecordingUI();
             };
 
@@ -584,28 +594,34 @@
         }
 
         function toggleRecording() {
-            if (!recognition) return alert("Trình duyệt không hỗ trợ nhận diện giọng nói (Vui lòng dùng Chrome).");
+            if (!recognition) return alert("Trình duyệt không hỗ trợ nhận diện giọng nói (Vui lòng dùng Chrome hoặc Edge).");
             
             if (isRecording) {
                 recognition.stop();
             } else {
-                recognition.start();
-                isRecording = true;
-                const btn = document.getElementById('btn-record');
-                btn.classList.add('recording-pulse');
-                btn.innerText = "🛑 Đang nghe...";
-                
-                document.getElementById('noi-visual-result').style.display = 'none';
-                document.getElementById('noi-spoken-text').style.display = 'none';
-                document.getElementById('btn-submit-noi').style.display = 'none';
+                try {
+                    recognition.start();
+                    isRecording = true;
+                    const btn = document.getElementById('btn-record');
+                    btn.classList.add('recording-pulse');
+                    btn.innerText = "🛑 Đang nghe...";
+                    
+                    document.getElementById('noi-visual-result').style.display = 'none';
+                    document.getElementById('noi-spoken-text').style.display = 'none';
+                    document.getElementById('btn-submit-noi').style.display = 'none';
+                } catch (e) {
+                    console.error("Micro đang bận:", e);
+                }
             }
         }
 
         function stopRecordingUI() {
             isRecording = false;
             const btn = document.getElementById('btn-record');
-            btn.classList.remove('recording-pulse');
-            btn.innerText = "🎤 Bấm để Đọc lại";
+            if(btn) {
+                btn.classList.remove('recording-pulse');
+                btn.innerText = "🎤 Bấm để Đọc lại";
+            }
         }
 
         function processPronunciation() {
